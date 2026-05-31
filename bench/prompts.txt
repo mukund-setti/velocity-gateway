@@ -1,0 +1,15 @@
+Explain how transformers work to a software engineer
+What is the time complexity of quicksort and why
+Summarize the CAP theorem in three bullet points
+Describe how Raft achieves leader election
+What is HNSW and why is it used for vector search
+Explain backpressure in streaming systems
+Compare REST and gRPC for internal services
+What is the difference between p50 and p99 latency
+Describe how Kafka achieves exactly-once semantics
+Explain how SSTables compact in LSM-tree databases
+What is the role of a KV cache in LLM inference
+Describe continuous batching for LLM serving
+What does it mean for a system to be eventually consistent
+Explain the BASE properties versus ACID
+Describe how rate limiting differs from concurrency limiting
