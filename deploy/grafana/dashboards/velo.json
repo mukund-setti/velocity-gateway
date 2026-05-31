@@ -1,0 +1,110 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Requests / sec",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {"expr": "sum(rate(velo_requests_total[1m]))", "legendFormat": "rps"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Cache hit rate",
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}},
+      "targets": [
+        {"expr": "sum(rate(velo_cache_hits_total[1m])) / clamp_min(sum(rate(velo_cache_hits_total[1m])) + sum(rate(velo_cache_misses_total[1m])), 1)"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Tokens / sec",
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {"expr": "sum(rate(velo_tokens_generated_total[1m]))"}
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Scheduler queue depth",
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "targets": [{"expr": "velo_scheduler_queue_depth"}]
+    },
+    {
+      "type": "timeseries",
+      "title": "Request latency (p50 / p95 / p99)",
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(velo_request_duration_seconds_bucket[1m])) by (le))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, sum(rate(velo_request_duration_seconds_bucket[1m])) by (le))", "legendFormat": "p95"},
+        {"expr": "histogram_quantile(0.99, sum(rate(velo_request_duration_seconds_bucket[1m])) by (le))", "legendFormat": "p99"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Time to first token (p50 / p95)",
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(velo_time_to_first_token_seconds_bucket[1m])) by (le))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, sum(rate(velo_time_to_first_token_seconds_bucket[1m])) by (le))", "legendFormat": "p95"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Batch size distribution",
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(velo_scheduler_batch_size_bucket[1m])) by (le))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, sum(rate(velo_scheduler_batch_size_bucket[1m])) by (le))", "legendFormat": "p95"},
+        {"expr": "rate(velo_scheduler_batches_dispatched_total[1m])", "legendFormat": "batches/s"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Backend health",
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "short", "min": 0, "max": 1}},
+      "targets": [
+        {"expr": "velo_backend_up", "legendFormat": "{{backend}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Backend latency (p95)",
+      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(velo_backend_latency_seconds_bucket[1m])) by (le, backend))", "legendFormat": "{{backend}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Simulated GPU utilization",
+      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1}},
+      "targets": [
+        {"expr": "mock_backend_gpu_utilization", "legendFormat": "{{backend}}"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rate-limit rejections / Scheduler rejections",
+      "gridPos": {"x": 0, "y": 28, "w": 24, "h": 6},
+      "targets": [
+        {"expr": "rate(velo_ratelimit_rejections_total[1m])", "legendFormat": "ratelimit"},
+        {"expr": "rate(velo_scheduler_rejections_total[1m])", "legendFormat": "scheduler"}
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "time": {"from": "now-15m", "to": "now"},
+  "title": "Velo Gateway",
+  "uid": "velo-gateway",
+  "version": 1
+}

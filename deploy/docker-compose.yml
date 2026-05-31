@@ -1,0 +1,89 @@
+services:
+  velo:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.velo
+    container_name: velo
+    ports:
+      - "8080:8080"   # public gateway
+      - "9100:9100"   # /metrics
+    environment:
+      VELO_POSTGRES_URL: "postgres://velo:velo@postgres:5432/velo?sslmode=disable"
+      VELO_REDIS_ADDR: "redis:6379"
+      VELO_LOG_LEVEL: "info"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mock-backend-1:
+        condition: service_started
+      mock-backend-2:
+        condition: service_started
+
+  mock-backend-1:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mock-backend
+    container_name: mock-backend-1
+    command: ["-addr", ":9000", "-name", "mock-1", "-token-latency", "15ms"]
+    expose:
+      - "9000"
+
+  mock-backend-2:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.mock-backend
+    container_name: mock-backend-2
+    command: ["-addr", ":9000", "-name", "mock-2", "-token-latency", "20ms"]
+    expose:
+      - "9000"
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: velo-postgres
+    environment:
+      POSTGRES_USER: velo
+      POSTGRES_PASSWORD: velo
+      POSTGRES_DB: velo
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U velo"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: velo-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    container_name: velo-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: velo-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_SECURITY_ADMIN_PASSWORD: "velo"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  pgdata:
