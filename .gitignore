@@ -1,11 +1,11 @@
 # Binaries
 /bin/
-velo
-velo.exe
-mock-backend
-mock-backend.exe
-load
-load.exe
+/velo
+/velo.exe
+/mock-backend
+/mock-backend.exe
+/load
+/load.exe
 
 # Test artifacts
 *.test
