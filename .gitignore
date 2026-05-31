@@ -1,0 +1,30 @@
+# Binaries
+/bin/
+velo
+velo.exe
+mock-backend
+mock-backend.exe
+load
+load.exe
+
+# Test artifacts
+*.test
+*.out
+coverage.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+*.local.yaml
+.env
+.env.local
+
+# Build cache
+/dist/

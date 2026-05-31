@@ -1,0 +1,57 @@
+# Velo gateway reference configuration.
+# Every value here can be overridden by a VELO_* env var — see internal/config.
+
+server:
+  addr: ":8080"
+  metrics_addr: ":9100"
+  read_timeout: 30s
+  write_timeout: 5m
+
+auth:
+  api_keys:
+    - "sk-velo-dev"
+
+scheduler:
+  enabled: true
+  # Continuous micro-batching: dispatch when either MaxBatchSize requests
+  # accumulate OR MaxWait elapses, whichever comes first.
+  max_batch_size: 16
+  max_wait: 40ms
+  queue_capacity: 2048
+  workers: 8
+
+cache:
+  enabled: true
+  store: "pgvector"
+  postgres_url: "postgres://velo:velo@postgres:5432/velo?sslmode=disable"
+  embedder: "hashing"        # deterministic local embedder — no API key needed
+  embedder_dim: 384
+  similarity_threshold: 0.92
+  ttl: 1h
+  max_entries: 50000
+
+ratelimit:
+  enabled: true
+  store: "redis"
+  redis_addr: "redis:6379"
+  default_rps: 20
+  default_burst: 40
+
+router:
+  strategy: "weighted_p2c"
+  health_check_path: "/health"
+  health_interval: 5s
+  health_timeout: 2s
+  failure_threshold: 3
+  retry_attempts: 2
+  request_timeout: 60s
+  backends:
+    - name: "mock-1"
+      url: "http://mock-backend-1:9000"
+      weight: 1
+    - name: "mock-2"
+      url: "http://mock-backend-2:9000"
+      weight: 1
+
+logging:
+  level: "info"
