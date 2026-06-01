@@ -19,7 +19,7 @@
 //   - We L2-normalize embeddings at write time so cosine similarity reduces
 //     to a vector dot product, which lets pgvector use its IVFFlat index
 //     unchanged.
-//   - The threshold defaults to 0.92 — conservative enough that "what is X"
+//   - The threshold defaults to 0.92 - conservative enough that "what is X"
 //     and "explain X" don't collide unless the user wants them to.
 package cache
 

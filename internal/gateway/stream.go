@@ -50,7 +50,7 @@ func streamProxy(ctx context.Context, w http.ResponseWriter, body io.Reader, bac
 			}
 			flusher.Flush()
 			// Extract the delta content for caching/metrics. We tolerate any
-			// non-JSON SSE noise — e.g. the [DONE] sentinel.
+			// non-JSON SSE noise - e.g. the [DONE] sentinel.
 			if bytes.HasPrefix(line, []byte("data: ")) {
 				payload := bytes.TrimSpace(line[len("data: "):])
 				if !bytes.Equal(payload, []byte("[DONE]")) {

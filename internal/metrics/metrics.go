@@ -38,7 +38,7 @@ var (
 		Help: "Completion tokens streamed through the gateway.",
 	}, []string{"backend", "model"})
 
-	// Scheduler metrics — the centerpiece of the system.
+	// Scheduler metrics - the centerpiece of the system.
 
 	QueueDepth = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "velo_scheduler_queue_depth",

@@ -3,7 +3,7 @@
 // Selection strategy is "weighted power-of-two-choices" (weighted P2C):
 // pick two healthy backends at random (with probability proportional to
 // their configured weights), then pick the one with fewer in-flight
-// requests. P2C is the gold-standard low-overhead load-balancing strategy —
+// requests. P2C is the gold-standard low-overhead load-balancing strategy -
 // it's cheap, has tight tail-latency bounds in theory and practice, and
 // degrades to plain weighted-random when N=1 or N=2.
 //
@@ -54,7 +54,7 @@ func New(cfg config.Router) (*Router, error) {
 		cancel()
 	}()
 	go r.healthLoop(ctx)
-	// Mark all backends initially up — the first health tick will correct any.
+	// Mark all backends initially up - the first health tick will correct any.
 	for _, b := range r.backends {
 		metrics.BackendUp.WithLabelValues(b.Name).Set(1)
 	}
@@ -151,7 +151,7 @@ func (r *Router) pick(exclude map[string]bool) *Backend {
 		candidates = append(candidates, b)
 	}
 	if len(candidates) == 0 {
-		// Last resort: pick any non-excluded backend even if unhealthy —
+		// Last resort: pick any non-excluded backend even if unhealthy -
 		// better to try a degraded backend than to return 503.
 		for _, b := range r.backends {
 			if !exclude[b.Name] {

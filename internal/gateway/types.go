@@ -20,7 +20,7 @@ type ChatRequest struct {
 	MaxTokens int          `json:"max_tokens,omitempty"`
 	Temperature float64    `json:"temperature,omitempty"`
 
-	// Raw is the original request bytes — we forward these verbatim to the
+	// Raw is the original request bytes - we forward these verbatim to the
 	// backend rather than rebuilding the payload, so any provider-specific
 	// extension fields (functions, tools, response_format, etc.) survive.
 	Raw json.RawMessage `json:"-"`

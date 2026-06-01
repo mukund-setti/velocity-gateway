@@ -33,7 +33,7 @@ test-race:
 
 lint:
 	@command -v golangci-lint >/dev/null 2>&1 || { \
-		echo "golangci-lint not installed — falling back to go vet"; \
+		echo "golangci-lint not installed - falling back to go vet"; \
 		go vet ./...; exit 0; }
 	golangci-lint run ./...
 

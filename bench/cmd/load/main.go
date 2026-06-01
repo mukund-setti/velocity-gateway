@@ -4,7 +4,7 @@
 // chat-completion against the gateway, and records per-request latency and
 // time-to-first-token. It can drive the same workload twice with different
 // configurations (e.g. batching+cache on vs off) and emit a markdown table
-// comparing the two runs — ready to paste into a README or a resume.
+// comparing the two runs - ready to paste into a README or a resume.
 //
 // Usage:
 //
@@ -62,7 +62,7 @@ func main() {
 		len(pps), *url, *concurrency, *duration, *repeatRate*100)
 
 	if *compare {
-		// Run 1: cold — disable cache via Cache-Control: no-store and use
+		// Run 1: cold - disable cache via Cache-Control: no-store and use
 		// unique prompts. Measures the cache-off floor: just batching +
 		// routing + streaming overhead.
 		fmt.Println("\n== Run 1: cold (Cache-Control: no-store, unique prompts) ==")
@@ -305,7 +305,7 @@ func renderMarkdown(cold, warm aggregate) string {
 	rps1, tps1, h1, p501, p951, p991, t501 := row(cold)
 	rps2, tps2, h2, p502, p952, p992, t502 := row(warm)
 	b := &strings.Builder{}
-	fmt.Fprintf(b, "## Velo benchmark — concurrency=%d duration=%s\n\n", *concurrency, *duration)
+	fmt.Fprintf(b, "## Velo benchmark - concurrency=%d duration=%s\n\n", *concurrency, *duration)
 	fmt.Fprintln(b, "| metric              | cold (cache miss only) | warm (batching + cache) | delta |")
 	fmt.Fprintln(b, "|---------------------|------------------------|-------------------------|-------|")
 	fmt.Fprintf(b, "| Requests/sec        | %.1f                  | %.1f                   | %s |\n", rps1, rps2, pctDelta(rps1, rps2))
@@ -320,7 +320,7 @@ func renderMarkdown(cold, warm aggregate) string {
 
 func pctDelta(a, b float64) string {
 	if a == 0 {
-		return "—"
+		return "-"
 	}
 	return fmt.Sprintf("%+.0f%%", (b-a)/a*100)
 }
@@ -328,7 +328,7 @@ func pctDelta(a, b float64) string {
 // pctDeltaInv reports improvements where lower is better.
 func pctDeltaInv(a, b float64) string {
 	if a == 0 {
-		return "—"
+		return "-"
 	}
 	return fmt.Sprintf("%+.0f%%", (b-a)/a*100)
 }

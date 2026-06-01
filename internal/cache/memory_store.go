@@ -13,7 +13,7 @@ import (
 // It does a brute-force linear scan on every Nearest() call. That's O(N×d)
 // per lookup, but for the dimensions and entry counts the gateway sees in
 // practice (a few thousand entries × 384 floats), it stays well under a
-// millisecond — and we get exact nearest-neighbor without needing an index.
+// millisecond - and we get exact nearest-neighbor without needing an index.
 type MemoryStore struct {
 	mu       sync.RWMutex
 	entries  []memEntry

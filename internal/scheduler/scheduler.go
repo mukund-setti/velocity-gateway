@@ -16,8 +16,8 @@
 // The dispatcher exposes two knobs that together control the throughput /
 // latency tradeoff:
 //
-//   - MaxBatchSize  — flush as soon as this many compatible jobs accumulate
-//   - MaxWait       — flush every batch this often, even if undersized
+//   - MaxBatchSize  - flush as soon as this many compatible jobs accumulate
+//   - MaxWait       - flush every batch this often, even if undersized
 //
 // Whichever fires first wins. Bigger batches = higher throughput, more
 // per-request latency. Bigger MaxWait = more chances to batch, more
@@ -71,7 +71,7 @@ type Job struct {
 	Done     chan struct{}
 }
 
-// Dispatcher is the upstream interface — the router implements this.
+// Dispatcher is the upstream interface - the router implements this.
 type Dispatcher interface {
 	Do(ctx context.Context, body []byte, stream bool) (*http.Response, string, error)
 }
@@ -158,7 +158,7 @@ func (s *Scheduler) Submit(ctx context.Context, j *Job) error {
 func (s *Scheduler) runBatcher() {
 	defer close(s.stopped)
 
-	// batch holds jobs accumulated for the current batch — model is keyed
+	// batch holds jobs accumulated for the current batch - model is keyed
 	// off the first arrival so we only group jobs that target the same
 	// model. (Different models can be batched independently by spinning
 	// per-model schedulers; we keep this single-model simple.)
@@ -198,7 +198,7 @@ func (s *Scheduler) runBatcher() {
 			}
 		case j := <-s.queue:
 			if len(batch) == 0 {
-				// First job in a new batch — arm the wait-window timer. The
+				// First job in a new batch - arm the wait-window timer. The
 				// drain pattern handles the case where the timer has
 				// already fired since the previous Reset.
 				if !timer.Stop() {
@@ -222,7 +222,7 @@ func (s *Scheduler) runBatcher() {
 }
 
 // dispatchBatch fans the batch out to the worker pool. Each worker handles
-// one job — they run concurrently, but the upstream backend sees them
+// one job - they run concurrently, but the upstream backend sees them
 // arrive in a tight burst, which is the part that helps in-flight batchers
 // on the backend side.
 //

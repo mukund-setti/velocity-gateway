@@ -20,7 +20,7 @@ import (
 )
 
 // Deps bundles the subsystem dependencies the gateway handler needs.
-// Any of these may be nil — the handler degrades gracefully.
+// Any of these may be nil - the handler degrades gracefully.
 type Deps struct {
 	Cache       *cache.Cache
 	Limiter     ratelimit.Limiter
@@ -76,7 +76,7 @@ func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 
 	prompt := flattenPrompt(req.Messages)
 
-	// Honor Cache-Control: no-store — useful for benchmarking the
+	// Honor Cache-Control: no-store - useful for benchmarking the
 	// no-cache path and for clients that explicitly need fresh inference.
 	bypassCache := strings.Contains(r.Header.Get("Cache-Control"), "no-store")
 
@@ -90,7 +90,7 @@ func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 2. Hand off to scheduler/router. The scheduler is the centerpiece —
+	// 2. Hand off to scheduler/router. The scheduler is the centerpiece -
 	//    it batches compatible requests and dispatches them via the router.
 	job := &scheduler.Job{
 		Model:    req.Model,
@@ -112,7 +112,7 @@ func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// Scheduler disabled — dispatch directly.
+		// Scheduler disabled - dispatch directly.
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()

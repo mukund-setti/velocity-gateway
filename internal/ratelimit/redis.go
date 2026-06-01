@@ -52,7 +52,7 @@ return allowed
 //
 // If Redis becomes unreachable, Allow() falls back to a per-process
 // MemoryLimiter and logs the degradation. We *never* fail-closed on Redis
-// errors — that would turn a Redis outage into a gateway outage.
+// errors - that would turn a Redis outage into a gateway outage.
 type RedisLimiter struct {
 	cfg      Config
 	client   *redis.Client

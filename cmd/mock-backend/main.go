@@ -64,7 +64,7 @@ var (
 	maxInFlight atomic.Int64
 )
 
-// canned token vocabulary — short words so the stream looks like text.
+// canned token vocabulary - short words so the stream looks like text.
 var vocab = []string{
 	"The", "Velo", "gateway", "is", "an", "LLM", "inference", "proxy", "with",
 	"continuous", "batching", "semantic", "cache", "and", "rate", "limiting", ".",

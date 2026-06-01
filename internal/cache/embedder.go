@@ -25,7 +25,7 @@ type Embedder interface {
 // and benchmarks. It applies the hashing trick (Weinberger 2009): each token
 // is hashed into one of Dim buckets and a sign bit, the bucket is incremented
 // by ±1, then the vector is L2-normalized. Cosine similarity between two
-// HashingEmbedder vectors approximates Jaccard-like prompt overlap — good
+// HashingEmbedder vectors approximates Jaccard-like prompt overlap - good
 // enough for cache-hit experiments without an embedding model.
 type HashingEmbedder struct {
 	dim int
@@ -88,7 +88,7 @@ func hashToken(tok string, dim int) (int, bool) {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(tok))
 	v := h.Sum64()
-	// Use the low bits for bucket and the next bit for sign — keeps the
+	// Use the low bits for bucket and the next bit for sign - keeps the
 	// distribution roughly uniform.
 	bucket := int(v % uint64(dim))
 	sign := (v>>32)&1 == 0

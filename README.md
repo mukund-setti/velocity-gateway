@@ -1,19 +1,19 @@
-# Velo — an LLM inference gateway in Go
+# Velo - an LLM inference gateway in Go
 
 Velo is a high-throughput reverse proxy for OpenAI-compatible LLM endpoints.
 It sits between client traffic and one or more model servers and adds:
 
-- **Continuous micro-batching** — admission scheduler that groups compatible
+- **Continuous micro-batching** - admission scheduler that groups compatible
   requests so backends with in-flight batching (vLLM, TGI, llama.cpp) get a
   tight burst instead of trickled-in singletons.
-- **Semantic caching** — pgvector-backed nearest-neighbor cache with a
+- **Semantic caching** - pgvector-backed nearest-neighbor cache with a
   pluggable embedder; serves cached responses on prompt paraphrases.
-- **Distributed rate limiting** — atomic Redis token-bucket per API key,
+- **Distributed rate limiting** - atomic Redis token-bucket per API key,
   with graceful in-process fallback.
-- **Multi-backend routing** — weighted power-of-two-choices load balancing
+- **Multi-backend routing** - weighted power-of-two-choices load balancing
   across N backends, with health checks and transparent failover on error
   or timeout.
-- **Full observability** — Prometheus metrics for tokens/sec, queue depth,
+- **Full observability** - Prometheus metrics for tokens/sec, queue depth,
   batch size, latency percentiles, cache hit rate, backend health and
   simulated GPU utilization, plus a pre-built Grafana dashboard.
 
@@ -59,8 +59,8 @@ LLM workloads are uniquely hostile to traditional reverse proxies:
 - **Throughput scales with batching**, but only inside the model server, so
   the gateway has to deliver requests in tight temporal bursts to let the
   backend's iteration-level batcher group them on the GPU.
-- **Prompt traffic is heavily redundant** in production — system prompts,
-  RAG templates, few-shot exemplars — so semantic caching gives a massive
+- **Prompt traffic is heavily redundant** in production - system prompts,
+  RAG templates, few-shot exemplars - so semantic caching gives a massive
   free win compared to a key-by-hash cache.
 - **Failures are common** (rate limits, OOMs, cold starts), so failover
   needs to be transparent at the request level, not just at the connection
@@ -69,6 +69,8 @@ LLM workloads are uniquely hostile to traditional reverse proxies:
 Velo is one process that handles all four.
 
 ## Quickstart
+
+### macOS / Linux (Make)
 
 ```bash
 # 1. Bring up the full stack.
@@ -91,37 +93,82 @@ make bench
 cat bench/out/report.md
 ```
 
+### Windows (PowerShell - direct commands)
+
+The Makefile assumes Unix `mkdir -p`/`rm -rf`/line continuations, so on
+Windows skip `make` and run the underlying commands directly. The
+gateway, mock backends, and the Postgres/Redis dependencies all live
+inside the compose stack - only Go (and a working Docker Desktop) need
+to be installed on the host.
+
+```powershell
+# 1. Bring up the full stack.
+docker compose -f deploy/docker-compose.yml up -d --build
+
+# 2. Send a streaming request. (curl.exe ships with Windows 10+.)
+curl.exe -N http://localhost:8080/v1/chat/completions `
+  -H "Authorization: Bearer sk-velo-dev" `
+  -H "Content-Type: application/json" `
+  -d '{\"model\":\"mock-llm\",\"stream\":true,\"messages\":[{\"role\":\"user\",\"content\":\"Explain continuous batching\"}]}'
+
+# 3. Open Grafana → http://localhost:3000 → "Velo Gateway" dashboard.
+
+# 4. Run the benchmark.
+New-Item -ItemType Directory -Force bench/out | Out-Null
+go run ./bench/cmd/load -url http://localhost:8080 -concurrency 16 -duration 30s -compare -output bench/out/report.md
+Get-Content bench/out/report.md
+
+# Other useful targets:
+go test ./internal/... -count=1                                    # tests
+docker compose -f deploy/docker-compose.yml logs -f velo           # follow logs
+docker compose -f deploy/docker-compose.yml down -v                # tear down
+```
+
 ## Benchmark
 
 `make bench` runs two passes against a fresh stack, 16 concurrent streaming
 workers for 30 s each, against two mock backends (15 ms and 20 ms per-token
 latency, 40 max tokens):
 
-1. **Cold** — `Cache-Control: no-store` and unique prompts. Measures the
+1. **Cold** - `Cache-Control: no-store` and unique prompts. Measures the
    cache-off floor: just batching + routing + streaming overhead.
-2. **Warm** — cache enabled, ~60 % of requests reuse a recent prompt. The
+2. **Warm** - cache enabled, ~60 % of requests reuse a recent prompt. The
    semantic cache catches paraphrases and the scheduler has steady traffic
    to micro-batch.
 
-### Results (Windows 11 / Go 1.26 / 2× local mock backend)
+### Results - real pgvector + redis stack via docker compose
 
-| metric              | cold (cache off)       | warm (batching + cache) | delta    |
-|---------------------|------------------------|-------------------------|----------|
-| Requests/sec        | 21.6                   | 136.6                   | **+532 %** |
-| Tokens/sec          | 851.9                  | 5,450.4                 | **+540 %** |
-| Latency p50         | 669 ms                 | 98 ms                   | **−85 %**  |
-| Latency p95         | 870 ms                 | 105 ms                  | **−88 %**  |
-| Latency p99         | 876 ms                 | 857 ms                  | −2 %      |
-| TTFT p50            | 41.5 ms                | 1.1 ms                  | **−97 %**  |
-| Cache hit rate      | 0.0 %                  | 97.0 %                  | +97 pp   |
+Run: 16 streaming workers, 30 s, two mock backends (15 / 20 ms per-token
+latency), Postgres + pgvector for the cache, Redis for the rate-limiter,
+similarity threshold 0.92, 60 % prompt reuse.
 
-p99 stays around the cold value because a cache miss in the warm run still
-pays the full mock-backend latency (40 tokens × 15 ms ≈ 600 ms + queueing).
-That's the right behaviour — the median improves dramatically with cache
-hits, but the tail is bounded by the slowest upstream path. With faster
-real backends (or larger `MaxBatchSize`) the tail compresses too.
+| metric              | cold (cache off) | warm (batching + cache) | delta     |
+|---------------------|------------------|-------------------------|-----------|
+| Requests/sec        | 21.3             | 49.0                    | **+130 %** |
+| Tokens/sec          | 847              | 1 950                   | **+130 %** |
+| Latency p50         | 677 ms           | 107 ms                  | **−84 %**  |
+| Latency p95         | 876 ms           | 878 ms                  | ±0 %      |
+| Latency p99         | 888 ms           | 884 ms                  | ±0 %      |
+| TTFT p50            | 43.4 ms          | 5.3 ms                  | **−88 %**  |
+| Cache hit rate      | 0.0 %            | 65.8 %                  | +65.8 pp  |
+| Errors              | 0 / 640          | 0 / 1 469               | clean     |
 
-Re-run on your hardware with `make bench` and paste the new table here.
+**How to read this honestly:**
+
+- **The median is the cache story.** 66 % of warm requests are served from
+  pgvector in ~10 ms, dragging p50 down 84 % and TTFT p50 down 88 %.
+- **The tail is the batching/backend story.** The other 34 % of warm
+  requests miss the cache and still pay full upstream latency - that's
+  why p95/p99 don't move much. A real backend with iteration-level
+  batching would compress the tail too, but a gateway-tier proxy can
+  only do so much without that cooperation.
+- **Throughput compounds.** Skipping the backend on cache hits frees
+  worker time for the misses, so the gateway sustains 2.3× the rps at
+  the same concurrency.
+
+`make bench` regenerates `bench/out/report.md` on demand. Numbers depend
+on host CPU and the mock backends' `--token-latency` flag - re-run on
+your hardware to populate your own table.
 
 ## Design notes
 
@@ -136,21 +183,21 @@ forward pass; one that doesn't will still benefit from warm connections.
 
 Two knobs drive the throughput/latency tradeoff:
 
-- `MaxBatchSize` (default 16) — flush as soon as this many requests pile up.
-- `MaxWait` (default 40ms) — flush every batch this often regardless of
+- `MaxBatchSize` (default 16) - flush as soon as this many requests pile up.
+- `MaxWait` (default 40ms) - flush every batch this often regardless of
   size, so a quiet system doesn't stall the lone request waiting.
 
 The implementation lives in [`internal/scheduler/scheduler.go`](internal/scheduler/scheduler.go)
-and is intentionally short — the trick is the bookkeeping, not the math.
+and is intentionally short - the trick is the bookkeeping, not the math.
 
 ### Semantic cache
 
 Embeddings live behind a one-method interface. There are two implementations:
 
-- `HashingEmbedder` — hashing-trick embedder with FNV + sign bits, no
+- `HashingEmbedder` - hashing-trick embedder with FNV + sign bits, no
   dependencies. Used in tests, benchmarks, and any deployment that doesn't
   want to pay for embeddings on every request.
-- `OpenAIEmbedder` — real `text-embedding-3-small` calls.
+- `OpenAIEmbedder` - real `text-embedding-3-small` calls.
 
 The store sits behind another one-method interface. The production store is
 pgvector with an IVFFlat cosine index; the test store is an in-process slice
@@ -158,14 +205,14 @@ with brute-force linear scan. We L2-normalize on write so the index can use
 cosine distance directly and the in-memory store can use dot products.
 
 Threshold of 0.92 was picked by hand to err strongly on the side of false
-negatives — the cost of a false cache hit is a wrong answer; the cost of a
+negatives - the cost of a false cache hit is a wrong answer; the cost of a
 miss is a recomputation. Tune in `configs/velo.yaml`.
 
 ### Rate limiter
 
 Token-bucket per API key, atomic via a Lua script on Redis so N gateway
 replicas share one bucket. If Redis becomes unreachable we fall back to a
-per-process bucket and log — we **never** fail-closed on Redis errors,
+per-process bucket and log - we **never** fail-closed on Redis errors,
 because a Redis outage shouldn't take down the gateway.
 
 ### Router
@@ -175,7 +222,7 @@ configured weights, then pick the one with fewer in-flight requests. P2C is
 the standard low-overhead load-balancer because it has tight tail-latency
 bounds without per-decision global state.
 
-Health is a Boolean — a backend that fails `FailureThreshold` consecutive
+Health is a Boolean - a backend that fails `FailureThreshold` consecutive
 health probes flips to unhealthy; a single successful probe flips it back.
 On a transient request error, the router retries on a different healthy
 backend up to `RetryAttempts` times; failure to all backends propagates as
@@ -257,4 +304,4 @@ see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

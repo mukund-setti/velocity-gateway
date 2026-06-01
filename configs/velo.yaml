@@ -1,5 +1,5 @@
 # Velo gateway reference configuration.
-# Every value here can be overridden by a VELO_* env var — see internal/config.
+# Every value here can be overridden by a VELO_* env var - see internal/config.
 
 server:
   addr: ":8080"
@@ -24,7 +24,7 @@ cache:
   enabled: true
   store: "pgvector"
   postgres_url: "postgres://velo:velo@postgres:5432/velo?sslmode=disable"
-  embedder: "hashing"        # deterministic local embedder — no API key needed
+  embedder: "hashing"        # deterministic local embedder - no API key needed
   embedder_dim: 384
   similarity_threshold: 0.92
   ttl: 1h
@@ -34,8 +34,8 @@ ratelimit:
   enabled: true
   store: "redis"
   redis_addr: "redis:6379"
-  default_rps: 20
-  default_burst: 40
+  default_rps: 2000
+  default_burst: 4000
 
 router:
   strategy: "weighted_p2c"

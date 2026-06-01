@@ -17,7 +17,7 @@ import (
 // fakeDispatcher records the batches it observes.
 //
 // Because the scheduler dispatches each job in a batch concurrently, we
-// can't observe "a batch" directly — but we can capture the timestamps each
+// can't observe "a batch" directly - but we can capture the timestamps each
 // job arrived at and reconstruct batches by looking at clusters in arrival
 // time. We use a small grace window for clustering.
 type fakeDispatcher struct {
@@ -70,7 +70,7 @@ func TestScheduler_FlushOnMaxBatchSize(t *testing.T) {
 		require.NoError(t, j.Err)
 	}
 	elapsed := time.Since(start)
-	// Must flush well before MaxWait — if we waited for the timer the test
+	// Must flush well before MaxWait - if we waited for the timer the test
 	// would take at least ~500ms.
 	require.Less(t, elapsed, 200*time.Millisecond, "scheduler should flush on size, not wait for timer")
 	require.Equal(t, int64(4), disp.count.Load())

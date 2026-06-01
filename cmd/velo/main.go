@@ -44,7 +44,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Velo — LLM inference gateway")
+	fmt.Fprintln(os.Stderr, "Velo - LLM inference gateway")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Usage:")
 	fmt.Fprintln(os.Stderr, "  velo serve --config configs/velo.yaml")
@@ -64,7 +64,7 @@ func serveCmd(args []string) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Router first — scheduler needs it as a dispatcher.
+	// Router first - scheduler needs it as a dispatcher.
 	rt, err := router.New(cfg.Router)
 	if err != nil {
 		log.Fatalf("router: %v", err)
