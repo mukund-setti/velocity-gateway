@@ -43,6 +43,7 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -224,6 +225,13 @@ func (s *Scheduler) runBatcher() {
 // one job — they run concurrently, but the upstream backend sees them
 // arrive in a tight burst, which is the part that helps in-flight batchers
 // on the backend side.
+//
+// Lifecycle subtlety: each upstream request is run under a
+// context.WithTimeout so a stuck backend can't tie up a worker forever. The
+// cancel func can't be `defer cancel()` here, because once we return from
+// this goroutine, the caller is still streaming the response body. Instead
+// we attach the cancel to the body's Close so the context lives exactly as
+// long as the response stream does.
 func (s *Scheduler) dispatchBatch(b []*Job) {
 	for _, j := range b {
 		j := j
@@ -234,17 +242,32 @@ func (s *Scheduler) dispatchBatch(b []*Job) {
 			metrics.BatchWaitTime.Observe(waited)
 
 			ctx, cancel := context.WithTimeout(context.Background(), s.cfg.RequestTimeout)
-			defer cancel()
 			resp, backend, err := s.disp.Do(ctx, j.Body, j.Stream)
 			if err != nil {
+				cancel()
 				j.Err = err
 				close(j.Done)
 				return
 			}
+			resp.Body = &cancelOnClose{ReadCloser: resp.Body, cancel: cancel}
 			j.Response = resp
 			j.Backend = backend
 			close(j.Done)
 		}()
 	}
+}
+
+// cancelOnClose ties a context.CancelFunc to a response body so the upstream
+// request's context lives exactly as long as the response stream.
+type cancelOnClose struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+	once   sync.Once
+}
+
+func (c *cancelOnClose) Close() error {
+	err := c.ReadCloser.Close()
+	c.once.Do(c.cancel)
+	return err
 }
 
