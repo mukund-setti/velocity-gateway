@@ -76,8 +76,12 @@ func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 
 	prompt := flattenPrompt(req.Messages)
 
+	// Honor Cache-Control: no-store — useful for benchmarking the
+	// no-cache path and for clients that explicitly need fresh inference.
+	bypassCache := strings.Contains(r.Header.Get("Cache-Control"), "no-store")
+
 	// 1. Semantic cache lookup.
-	if s.deps.Cache != nil {
+	if s.deps.Cache != nil && !bypassCache {
 		if hit, err := s.deps.Cache.Lookup(r.Context(), prompt); err != nil {
 			log.Printf("cache lookup error: %v", err)
 		} else if hit != nil {
@@ -139,7 +143,7 @@ func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("stream proxy error: %v", err)
 		}
 		// Store in cache after a successful full stream.
-		if s.deps.Cache != nil && content != "" {
+		if s.deps.Cache != nil && !bypassCache && content != "" {
 			if err := s.deps.Cache.Store(context.Background(), prompt, &cache.Entry{
 				Model: req.Model, Content: content,
 			}); err != nil {
@@ -161,7 +165,7 @@ func (s *Server) chatHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Velo-Backend", job.Backend)
 	_, _ = w.Write(body)
 
-	if s.deps.Cache != nil {
+	if s.deps.Cache != nil && !bypassCache {
 		if content := extractAssistantContent(body); content != "" {
 			if err := s.deps.Cache.Store(context.Background(), prompt, &cache.Entry{
 				Model: req.Model, Content: content, Raw: body,

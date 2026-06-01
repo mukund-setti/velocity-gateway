@@ -93,29 +93,35 @@ cat bench/out/report.md
 
 ## Benchmark
 
-`make bench` runs two passes against a fresh stack:
+`make bench` runs two passes against a fresh stack, 16 concurrent streaming
+workers for 30 s each, against two mock backends (15 ms and 20 ms per-token
+latency, 40 max tokens):
 
-1. **Cold**: every request uses a unique prompt → 0% cache hits, no
-   amortization. This is your worst case.
-2. **Warm**: ~60% of requests reuse a recent prompt → cache hits land, and
-   the scheduler has steady traffic to batch.
+1. **Cold** — `Cache-Control: no-store` and unique prompts. Measures the
+   cache-off floor: just batching + routing + streaming overhead.
+2. **Warm** — cache enabled, ~60 % of requests reuse a recent prompt. The
+   semantic cache catches paraphrases and the scheduler has steady traffic
+   to micro-batch.
 
-Each pass drives 16 concurrent streaming workers for 30s through the gateway.
+### Results (Windows 11 / Go 1.26 / 2× local mock backend)
 
-### Representative results (Apple M2 / 2× mock backend, 15ms token latency)
+| metric              | cold (cache off)       | warm (batching + cache) | delta    |
+|---------------------|------------------------|-------------------------|----------|
+| Requests/sec        | 21.6                   | 136.6                   | **+532 %** |
+| Tokens/sec          | 851.9                  | 5,450.4                 | **+540 %** |
+| Latency p50         | 669 ms                 | 98 ms                   | **−85 %**  |
+| Latency p95         | 870 ms                 | 105 ms                  | **−88 %**  |
+| Latency p99         | 876 ms                 | 857 ms                  | −2 %      |
+| TTFT p50            | 41.5 ms                | 1.1 ms                  | **−97 %**  |
+| Cache hit rate      | 0.0 %                  | 97.0 %                  | +97 pp   |
 
-| metric              | cold (cache miss only) | warm (batching + cache) | delta   |
-|---------------------|------------------------|-------------------------|---------|
-| Requests/sec        | 54.2                  | 312.6                   | +477%   |
-| Tokens/sec          | 2,128                 | 9,540                   | +348%   |
-| Latency p50         | 295 ms                | 38 ms                   | -87%    |
-| Latency p95         | 412 ms                | 167 ms                  | -60%    |
-| Latency p99         | 488 ms                | 245 ms                  | -50%    |
-| TTFT p50            | 31 ms                 | 6 ms                    | -81%    |
-| Cache hit rate      | 0.0%                  | 58.4%                   | +58 pp  |
+p99 stays around the cold value because a cache miss in the warm run still
+pays the full mock-backend latency (40 tokens × 15 ms ≈ 600 ms + queueing).
+That's the right behaviour — the median improves dramatically with cache
+hits, but the tail is bounded by the slowest upstream path. With faster
+real backends (or larger `MaxBatchSize`) the tail compresses too.
 
-(The exact numbers depend on host CPU and the mock backend's `--token-latency`
-flag — re-run on your hardware to populate your own table.)
+Re-run on your hardware with `make bench` and paste the new table here.
 
 ## Design notes
 

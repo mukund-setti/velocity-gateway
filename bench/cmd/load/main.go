@@ -62,13 +62,15 @@ func main() {
 		len(pps), *url, *concurrency, *duration, *repeatRate*100)
 
 	if *compare {
-		// Run 1: cold — flush cache by sending unique prompts only.
-		fmt.Println("\n== Run 1: cold (no cache hits expected) ==")
-		cold := runWorkload(pps, true /*uniqueOnly*/)
+		// Run 1: cold — disable cache via Cache-Control: no-store and use
+		// unique prompts. Measures the cache-off floor: just batching +
+		// routing + streaming overhead.
+		fmt.Println("\n== Run 1: cold (Cache-Control: no-store, unique prompts) ==")
+		cold := runWorkload(pps, true /*uniqueOnly*/, true /*noCache*/)
 		printSummary("cold", cold)
 
-		fmt.Println("\n== Run 2: warm (batching + cache enabled, prompt reuse) ==")
-		warm := runWorkload(pps, false)
+		fmt.Println("\n== Run 2: warm (batching + cache enabled, 60% prompt reuse) ==")
+		warm := runWorkload(pps, false, false)
 		printSummary("warm", warm)
 
 		md := renderMarkdown(cold, warm)
@@ -83,7 +85,7 @@ func main() {
 		return
 	}
 
-	res := runWorkload(pps, false)
+	res := runWorkload(pps, false, false)
 	printSummary("run", res)
 }
 
@@ -114,7 +116,7 @@ type aggregate struct {
 	wallStart, wallEnd time.Time
 }
 
-func runWorkload(prompts []string, uniqueOnly bool) aggregate {
+func runWorkload(prompts []string, uniqueOnly bool, noCache bool) aggregate {
 	ctx, cancel := context.WithTimeout(context.Background(), *duration)
 	defer cancel()
 
@@ -148,7 +150,7 @@ func runWorkload(prompts []string, uniqueOnly bool) aggregate {
 				} else {
 					p = recent[rng.Intn(len(recent))]
 				}
-				r := callStream(ctx, client, p)
+				r := callStream(ctx, client, p, noCache)
 				requests.Add(1)
 				if r.ok {
 					ok.Add(1)
@@ -172,7 +174,7 @@ func runWorkload(prompts []string, uniqueOnly bool) aggregate {
 	return agg
 }
 
-func callStream(ctx context.Context, client *http.Client, prompt string) result {
+func callStream(ctx context.Context, client *http.Client, prompt string, noCache bool) result {
 	body, _ := json.Marshal(map[string]any{
 		"model": *model,
 		"stream": true,
@@ -187,6 +189,9 @@ func callStream(ctx context.Context, client *http.Client, prompt string) result 
 	}
 	req.Header.Set("Authorization", "Bearer "+*apiKey)
 	req.Header.Set("Content-Type", "application/json")
+	if noCache {
+		req.Header.Set("Cache-Control", "no-store")
+	}
 
 	t0 := time.Now()
 	resp, err := client.Do(req)
